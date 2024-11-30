@@ -72,6 +72,12 @@ class Display:
         self.update_vuln_count_thread.daemon = True
         self.update_vuln_count_thread.start()
 
+        # If ups is mounted, create update thread
+        if self.shared_data.ups is not None:
+            self.update_ups_thread = threading.Thread(target=self.schedule_update_ups)
+            self.update_ups_thread.daemon = True
+            self.update_ups_thread.start()
+
         self.scale_factor_x = self.shared_data.scale_factor_x
         self.scale_factor_y = self.shared_data.scale_factor_y
 
@@ -95,6 +101,12 @@ class Display:
         while not self.shared_data.display_should_exit:
             self.update_vuln_count()
             time.sleep(300)
+
+    def schedule_update_ups(self):
+        """Periodically update the ups status on the display."""
+        while not self.shared_data.display_should_exit:
+            self.update_ups()
+            time.sleep(5)
 
     def update_main_image(self):
         """Update the main image on the display with the latest immagegen data."""
@@ -163,6 +175,14 @@ class Display:
                         logger.error(f"Livestatusfile {self.shared_data.livestatusfile} does not exist.")
             except Exception as e:
                 logger.error(f"An error occurred in update_vuln_count: {e}")
+
+    def update_ups(self):
+        """Update the ups status on the display."""
+        try:
+            self.shared_data.ups.update_all()
+            logger.debug(f"UPS : Plugged={self.shared_data.ups.plugged_in},V={self.shared_data.ups.voltage:2.1f},C={self.shared_data.ups.battery_capacity:3.0f}")
+        except Exception as e:
+            logger.error(f"Error updating ups: {e}")
 
     def update_shared_data(self):
         """Update the shared data with the latest system information."""
@@ -292,6 +312,19 @@ class Display:
                     image.paste(self.shared_data.wifi, (int(3 * self.scale_factor_x), int(3 * self.scale_factor_y)))
                 # # # if self.shared_data.bluetooth_active:
                 # # #     image.paste(self.shared_data.bluetooth, (int(23 * self.scale_factor_x), int(4 * self.scale_factor_y)))
+                if self.shared_data.ups is not None:
+                    if self.shared_data.ups.plugged_in:
+                        image.paste(self.shared_data.battery['charging'], (int(23 * self.scale_factor_x), int(4 * self.scale_factor_y)))
+                    else:
+                        if self.shared_data.ups.battery_capacity >= 80:
+                            image.paste(self.shared_data.battery['full'], (int(23 * self.scale_factor_x), int(4 * self.scale_factor_y)))
+                        elif self.shared_data.ups.battery_capacity >= 50:
+                            image.paste(self.shared_data.battery['mid'], (int(23 * self.scale_factor_x), int(4 * self.scale_factor_y)))
+                        elif self.shared_data.ups.battery_capacity >= 10:
+                            image.paste(self.shared_data.battery['low'], (int(23 * self.scale_factor_x), int(4 * self.scale_factor_y)))
+                        else:
+                            image.paste(self.shared_data.battery['empty'], (int(23 * self.scale_factor_x), int(4 * self.scale_factor_y)))
+
                 if self.shared_data.pan_connected:
                     image.paste(self.shared_data.connected, (int(104 * self.scale_factor_x), int(3 * self.scale_factor_y)))
                 if self.shared_data.usb_active:

@@ -228,6 +228,7 @@ install_dependencies() {
         "libi2c-dev"
         "libatlas-base-dev"
         "build-essential"
+        "python3-smbus"
     )
     
     # Install packages
@@ -316,6 +317,16 @@ setup_bjorn() {
     else
         log "ERROR" "Configuration file not found: config/shared_config.json"
         handle_error "E-Paper display configuration update"
+    fi
+
+    # Update the shared_config.json file with the selected UPS version
+    log "INFO" "Updating UPS configuration..."
+    if [ -f "config/shared_config.json" ]; then
+        sed -i "s/\"ups_type\": \"[^\"]*\"/\"ups_type\": \"$UPS_VERSION\"/" config/shared_config.json
+        check_success "Updated UPS configuration to $UPS_VERSION"
+    else
+        log "ERROR" "Configuration file not found: config/shared_config.json"
+        handle_error "UPS configuration update"
     fi
 
     # Install requirements with --break-system-packages flag
@@ -551,6 +562,22 @@ main() {
     done
 
     log "INFO" "Selected E-Paper Display version: $EPD_VERSION"
+
+    # UPS Selection
+    echo -e "\n${BLUE}Please select your UPS version:${NC}"
+    echo "1. NONE"
+    echo "2. ups-lite_V1.3"
+
+    while true; do
+        read -p "Enter your choice (1-2): " ups_choice
+        case $epd_choice in
+            1) UPS_VERSION="none"; break;;
+            2) UPS_VERSION="ups-lite_V1.3"; break;;
+            *) echo -e "${RED}Invalid choice. Please select 1-2.${NC}";;
+        esac
+    done
+
+    log "INFO" "Selected UPS version: $UPS_VERSION"
 
     case $install_option in
         1)

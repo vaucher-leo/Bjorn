@@ -24,6 +24,7 @@ import subprocess
 from PIL import Image, ImageFont 
 from logger import Logger
 from epd_helper import EPDHelper
+from ups import UPS
 
 
 logger = Logger(name="shared.py", level=logging.DEBUG) # Create a logger object 
@@ -215,6 +216,7 @@ class SharedData:
         self.delete_webconsolelog()
         self.initialize_csv()
         self.initialize_epd_display()
+        self.initialize_ups()
     
 
     # def initialize_epd_display(self):
@@ -268,6 +270,21 @@ class SharedData:
             self.epd_helper.init_full_update()
             self.width, self.height = self.epd_helper.epd.width, self.epd_helper.epd.height
             logger.info(f"EPD {self.config['epd_type']} initialized with size: {self.width}x{self.height}")
+        except Exception as e:
+            logger.error(f"Error initializing EPD display: {e}")
+            raise
+    
+    def initialize_ups(self):
+        """Initialize the UPS."""
+        try:
+            logger.info("Initializing UPS...")
+            if self.config["ups_type"] == "none":
+                logger.info("UPS type: no UPS")
+                self.ups = None
+            elif self.config["ups_type"] == "ups-lite_V1.3":
+                logger.info("UPS type: ups-lite_V1.3")
+                self.ups = UPS()
+            logger.info(f"UPS {self.config['ups_type']} initialized. Plugged={self.ups.plugged_in},V={self.ups.voltage:2.1f},C={self.ups.battery_capacity:3.0f}")
         except Exception as e:
             logger.error(f"Error initializing EPD display: {e}")
             raise
@@ -504,6 +521,13 @@ class SharedData:
             self.money = self.load_image(os.path.join(self.staticpicdir, 'money.bmp'))
             self.zombie_status = self.load_image(os.path.join(self.staticpicdir, 'zombie.bmp'))
             self.attack = self.load_image(os.path.join(self.staticpicdir, 'attack.bmp'))
+            self.battery = {
+                "full":self.load_image(os.path.join(self.staticpicdir, 'battery_full.bmp')),
+                "mid":self.load_image(os.path.join(self.staticpicdir, 'battery_mid.bmp')),
+                "low":self.load_image(os.path.join(self.staticpicdir, 'battery_low.bmp')),
+                "empty":self.load_image(os.path.join(self.staticpicdir, 'battery_empty.bmp')),
+                "charging":self.load_image(os.path.join(self.staticpicdir, 'battery_charging.bmp'))
+            }
 
             """ Load the images for the different actions status"""
             # Dynamically load status images based on actions.json
