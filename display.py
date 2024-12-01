@@ -180,7 +180,7 @@ class Display:
         """Update the ups status on the display."""
         try:
             self.shared_data.ups.update_all()
-            logger.debug(f"UPS : Plugged={self.shared_data.ups.plugged_in},V={self.shared_data.ups.voltage:2.1f},C={self.shared_data.ups.battery_capacity:3.0f}")
+            logger.debug(f"UPS : Plugged={self.shared_data.ups.plugged_in},V={self.shared_data.ups.voltage:2.1f},C={self.shared_data.ups.battery_capacity:3.0f}%")
         except Exception as e:
             logger.error(f"Error updating ups: {e}")
 
@@ -314,7 +314,7 @@ class Display:
                 # # #     image.paste(self.shared_data.bluetooth, (int(23 * self.scale_factor_x), int(4 * self.scale_factor_y)))
                 if self.shared_data.ups is not None:
                     if self.shared_data.ups.plugged_in:
-                        if self.shared_data.ups.battery_capacity == 100:
+                        if self.shared_data.ups.battery_capacity >= 99:
                             image.paste(self.shared_data.battery['charged'], (int(23 * self.scale_factor_x), int(4 * self.scale_factor_y)))
                         else:
                             image.paste(self.shared_data.battery['charging'], (int(23 * self.scale_factor_x), int(4 * self.scale_factor_y)))
