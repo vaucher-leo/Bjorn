@@ -314,7 +314,10 @@ class Display:
                 # # #     image.paste(self.shared_data.bluetooth, (int(23 * self.scale_factor_x), int(4 * self.scale_factor_y)))
                 if self.shared_data.ups is not None:
                     if self.shared_data.ups.plugged_in:
-                        image.paste(self.shared_data.battery['charging'], (int(23 * self.scale_factor_x), int(4 * self.scale_factor_y)))
+                        if self.shared_data.ups.battery_capacity == 100:
+                            image.paste(self.shared_data.battery['charged'], (int(23 * self.scale_factor_x), int(4 * self.scale_factor_y)))
+                        else:
+                            image.paste(self.shared_data.battery['charging'], (int(23 * self.scale_factor_x), int(4 * self.scale_factor_y)))
                     else:
                         if self.shared_data.ups.battery_capacity >= 80:
                             image.paste(self.shared_data.battery['full'], (int(23 * self.scale_factor_x), int(4 * self.scale_factor_y)))

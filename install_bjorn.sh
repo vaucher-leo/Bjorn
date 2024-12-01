@@ -567,12 +567,14 @@ main() {
     echo -e "\n${BLUE}Please select your UPS version:${NC}"
     echo "1. NONE"
     echo "2. ups-lite_V1.3"
+    echo "3. pisugar3"
 
     while true; do
         read -p "Enter your choice (1-2): " ups_choice
         case $epd_choice in
             1) UPS_VERSION="none"; break;;
-            2) UPS_VERSION="ups-lite_V1.3"; break;;
+            2) UPS_VERSION="ups-lite_V1.3"; ret=input("For this model, don't forget to bridge the two little pads next to the gpio pins. [Ok]"); break;;
+            3) UPS_VERSION="pisugar3"; break;;
             *) echo -e "${RED}Invalid choice. Please select 1-2.${NC}";;
         esac
     done

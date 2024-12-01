@@ -24,7 +24,7 @@ import subprocess
 from PIL import Image, ImageFont 
 from logger import Logger
 from epd_helper import EPDHelper
-from ups import UPS
+from ups import *
 
 
 logger = Logger(name="shared.py", level=logging.DEBUG) # Create a logger object 
@@ -281,12 +281,12 @@ class SharedData:
             if self.config["ups_type"] == "none":
                 logger.info("UPS type: no UPS")
                 self.ups = None
-            elif self.config["ups_type"] == "ups-lite_V1.3":
-                logger.info("UPS type: ups-lite_V1.3")
-                self.ups = UPS()
+            else:
+                logger.info(f"UPS type: {self.config['ups_type']}")
+                self.ups = CreateUPS(self.config["ups_type"])
             logger.info(f"UPS {self.config['ups_type']} initialized. Plugged={self.ups.plugged_in},V={self.ups.voltage:2.1f},C={self.ups.battery_capacity:3.0f}")
         except Exception as e:
-            logger.error(f"Error initializing EPD display: {e}")
+            logger.error(f"Error initializing UPS: {e}")
             raise
         
     def initialize_variables(self):
@@ -526,7 +526,8 @@ class SharedData:
                 "mid":self.load_image(os.path.join(self.staticpicdir, 'battery_mid.bmp')),
                 "low":self.load_image(os.path.join(self.staticpicdir, 'battery_low.bmp')),
                 "empty":self.load_image(os.path.join(self.staticpicdir, 'battery_empty.bmp')),
-                "charging":self.load_image(os.path.join(self.staticpicdir, 'battery_charging.bmp'))
+                "charging":self.load_image(os.path.join(self.staticpicdir, 'battery_charging.bmp')),
+                "charged":self.load_image(os.path.join(self.staticpicdir, 'battery_charged.bmp'))
             }
 
             """ Load the images for the different actions status"""
