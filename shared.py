@@ -528,6 +528,7 @@ class SharedData:
                 "empty":self.load_image(os.path.join(self.staticpicdir, 'battery_empty.bmp')),
                 "charging":self.load_image(os.path.join(self.staticpicdir, 'battery_charging.bmp')),
                 "charged":self.load_image(os.path.join(self.staticpicdir, 'battery_charged.bmp'))
+                "unknown":self.load_image(os.path.join(self.staticpicdir, 'battery_unknown.bmp'))
             }
 
             """ Load the images for the different actions status"""

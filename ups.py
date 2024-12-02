@@ -141,7 +141,7 @@ class PiSugar3(UPS):
     def read_voltage(self):
         """Read battery voltage"""
         read = self.bus.read_i2c_block_data(self.i2c_address, self.i2c_regs['PISUGAR_REG_VCELL_MSB'], 2)
-        self.voltage = (read[0] << 8) | read[1]
+        self.voltage = ((read[0] << 8) | read[1])/1000.0
 
     def read_plugged_in(self):
         """Read if power adapter is plugged in or not"""
