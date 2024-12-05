@@ -303,7 +303,9 @@ setup_bjorn() {
     else
         # No existing directory, proceed with clone
         log "INFO" "Cloning BJORN repository"
-        git clone https://github.com/infinition/Bjorn.git
+	# TODO revert to default link before PR
+        #git clone https://github.com/infinition/Bjorn.git
+	git clone -b ups-lite-support https://github.com/vaucher-leo/Bjorn.git
         check_success "Cloned BJORN repository"
     fi
 
@@ -571,9 +573,9 @@ main() {
 
     while true; do
         read -p "Enter your choice (1-2): " ups_choice
-        case $epd_choice in
+        case $ups_choice in
             1) UPS_VERSION="none"; break;;
-            2) UPS_VERSION="ups-lite_V1.3"; ret=input("For this model, don't forget to bridge the two little pads next to the gpio pins. [Ok]"); break;;
+            2) UPS_VERSION="ups-lite_V1.3"; read -p "For this model, don't forget to bridge the two little pads next to the gpio pins. [Ok]"; break;;
             3) UPS_VERSION="pisugar3"; break;;
             *) echo -e "${RED}Invalid choice. Please select 1-2.${NC}";;
         esac

@@ -22,10 +22,10 @@ import logging
 import random
 import sys
 from PIL import Image, ImageDraw
-from init_shared import shared_data  
+from init_shared import shared_data
 from comment import Commentaireia
 from logger import Logger
-import subprocess  
+import subprocess
 
 logger = Logger(name="display.py", level=logging.DEBUG)
 
@@ -130,7 +130,7 @@ class Display:
         except Exception as e:
             logger.error(f"Error getting open files: {e}")
             return None
-        
+
     def update_vuln_count(self):
         """Update the vulnerability count on the display."""
         with self.semaphore:
@@ -179,7 +179,27 @@ class Display:
     def update_ups(self):
         """Update the ups status on the display."""
         try:
-            self.shared_data.ups.update_all()
+            # Update ups values and keep changed to True if the screen was not yet updated
+            self.shared_data.ups_status_changed = self.shared_data.ups.update_all()
+            if self.shared_data.ups_status_changed:
+                self.shared_data.ups_status_changed = False
+                if self.shared_data.ups.voltage < 2.0:
+                    self.shared_data.battery_icon = self.shared_data.battery['unknown']
+                elif self.shared_data.ups.plugged_in:
+                    if self.shared_data.ups.battery_capacity >= 99:
+                        self.shared_data.battery_icon = self.shared_data.battery['charged']
+                    else:
+                        self.shared_data.battery_icon = self.shared_data.battery['charging']
+                else:
+                    if self.shared_data.ups.battery_capacity >= 80:
+                        self.shared_data.battery_icon = self.shared_data.battery['full']
+                    elif self.shared_data.ups.battery_capacity >= 50:
+                        self.shared_data.battery_icon = self.shared_data.battery['mid']
+                    elif self.shared_data.ups.battery_capacity >= 10:
+                        self.shared_data.battery_icon = self.shared_data.battery['low']
+                    else:
+                        self.shared_data.battery_icon = self.shared_data.battery['empty']
+
             logger.debug(f"UPS : Plugged={self.shared_data.ups.plugged_in},V={self.shared_data.ups.voltage:2.1f},C={self.shared_data.ups.battery_capacity:3.0f}%")
         except Exception as e:
             logger.error(f"Error updating ups: {e}")
@@ -307,29 +327,13 @@ class Display:
                 draw.rectangle((0, 0, self.shared_data.width, self.shared_data.height), fill=255)
                 draw.text((int(37 * self.scale_factor_x), int(5 * self.scale_factor_y)), "BJORN", font=self.shared_data.font_viking, fill=0)
                 draw.text((int(110 * self.scale_factor_x), int(170 * self.scale_factor_y)), self.manual_mode_txt, font=self.shared_data.font_arial14, fill=0)
-                
+
                 if self.shared_data.wifi_connected:
                     image.paste(self.shared_data.wifi, (int(3 * self.scale_factor_x), int(3 * self.scale_factor_y)))
                 # # # if self.shared_data.bluetooth_active:
                 # # #     image.paste(self.shared_data.bluetooth, (int(23 * self.scale_factor_x), int(4 * self.scale_factor_y)))
                 if self.shared_data.ups is not None:
-                    if self.shared_data.ups.voltage < 2.0:
-                        image.paste(self.shared_data.battery['unknown'], (int(23 * self.scale_factor_x), int(4 * self.scale_factor_y)))
-                    elif self.shared_data.ups.plugged_in:
-                        if self.shared_data.ups.battery_capacity >= 99: 
-                            image.paste(self.shared_data.battery['charged'], (int(23 * self.scale_factor_x), int(4 * self.scale_factor_y)))
-                        else:
-                            image.paste(self.shared_data.battery['charging'], (int(23 * self.scale_factor_x), int(4 * self.scale_factor_y)))
-                    else:
-                        if self.shared_data.ups.battery_capacity >= 80:
-                            image.paste(self.shared_data.battery['full'], (int(23 * self.scale_factor_x), int(4 * self.scale_factor_y)))
-                        elif self.shared_data.ups.battery_capacity >= 50:
-                            image.paste(self.shared_data.battery['mid'], (int(23 * self.scale_factor_x), int(4 * self.scale_factor_y)))
-                        elif self.shared_data.ups.battery_capacity >= 10:
-                            image.paste(self.shared_data.battery['low'], (int(23 * self.scale_factor_x), int(4 * self.scale_factor_y)))
-                        else:
-                            image.paste(self.shared_data.battery['empty'], (int(23 * self.scale_factor_x), int(4 * self.scale_factor_y)))
-
+                    image.paste(self.shared_data.battery_icon, (int(23 * self.scale_factor_x), int(4 * self.scale_factor_y)))
                 if self.shared_data.pan_connected:
                     image.paste(self.shared_data.connected, (int(104 * self.scale_factor_x), int(3 * self.scale_factor_y)))
                 if self.shared_data.usb_active:
@@ -390,7 +394,7 @@ class Display:
                     image.save(img_file)
                     img_file.flush()
                     os.fsync(img_file.fileno())
-                
+
                 time.sleep(self.shared_data.screen_delay)
             except Exception as e:
                 logger.error(f"An error occurred: {e}")
@@ -420,7 +424,7 @@ if __name__ == "__main__":
         display_thread = threading.Thread(target=main_loop.run)
         display_thread.start()
         logger.info("Main loop started.")
-        
+
         signal.signal(signal.SIGINT, lambda signum, frame: handle_exit_display(signum, frame, display_thread))
         signal.signal(signal.SIGTERM, lambda signum, frame: handle_exit_display(signum, frame, display_thread))
     except Exception as e:

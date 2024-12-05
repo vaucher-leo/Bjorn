@@ -45,7 +45,7 @@ class UPS:
     def read_capacity(self) -> None:
         """Read battery capacity"""
         self.battery_capacity = None
-    
+
     def read_voltage(self) -> None:
         """Read battery voltage"""
         self.voltage = None
@@ -53,12 +53,13 @@ class UPS:
     def read_plugged_in(self) -> None:
         """Read if power adapter is plugged in or not"""
         self.plugged_in = False
-    
+
     def update_all(self) -> None:
-        """Read all informations"""
+        """Read all informations and returns if something changed"""
         self.read_capacity()
         self.read_voltage()
         self.read_plugged_in()
+        return Flase
 
 class UPS_Lite(UPS):
     """Class for UPS model: UPS-Lite_V1.3"""
@@ -75,7 +76,7 @@ class UPS_Lite(UPS):
 
         try:
             self.bus = smbus.SMBus(1) # 0 = /dev/i2c-0 (port I2C0), 1 = /dev/i2c-1 (portI2C1)
-        
+
             # wake up the CW2015 and make a quick-start fuel-gauge calculations
             self.bus.write_word_data(self.i2c_address, self.i2c_regs['CW2015_REG_MODE'], 0x30)
 
@@ -90,26 +91,34 @@ class UPS_Lite(UPS):
         """Read battery capacity"""
         read = self.bus.read_word_data(self.i2c_address, self.i2c_regs['CW2015_REG_SOC'])
         swapped = struct.unpack("<H", struct.pack(">H", read))[0]
-        self.battery_capacity = swapped/256
-    
+        capacity = swapped/256
+        ret = self.battery_capacity == capacity
+        self.battery_capacity = capacity
+        return ret
+
     def read_voltage(self):
         """Read battery voltage"""
         read = self.bus.read_word_data(self.i2c_address, self.i2c_regs['CW2015_REG_VCELL'])
         swapped = struct.unpack("<H", struct.pack(">H", read))[0]
-        self.voltage = swapped * 0.305 /1000
+        voltage = swapped * 0.305 /1000
+        ret = self.voltage == voltage
+        self.voltage = voltage
+        return ret
 
     def read_plugged_in(self):
         """Read if power adapter is plugged in or not"""
-        if self.gpio_plugged_in.value == 1:
-            self.plugged_in = True
-        else:
-            self.plugged_in = False
-    
+        pin_state = bool(self.gpio_plugged_in.value)
+        ret = self.plugged_in == pin_state
+        self.plugged_in = pin_state
+        return ret
+
     def update_all(self):
-        """Read all informations"""
-        self.read_capacity()
-        self.read_voltage()
-        self.read_plugged_in()
+        """Read all informations and returns if something changed"""
+        ret = False
+        ret |= self.read_capacity()
+        ret |= self.read_voltage()
+        ret |= self.read_plugged_in()
+        return ret
 
 class PiSugar3(UPS):
     """Class for UPS model: UPS-Lite_V1.3"""
@@ -135,27 +144,34 @@ class PiSugar3(UPS):
 
     def read_capacity(self):
         """Read battery capacity"""
-        read = self.bus.read_byte_data(self.i2c_address, self.i2c_regs['PISUGAR_REG_BATT_CAPACITY'])
-        self.battery_capacity = read
-    
+        capacity = self.bus.read_byte_data(self.i2c_address, self.i2c_regs['PISUGAR_REG_BATT_CAPACITY'])
+        ret = self.battery_capacity == capacity
+        self.battery_capacity = capacity
+        return ret
+
     def read_voltage(self):
         """Read battery voltage"""
         read = self.bus.read_i2c_block_data(self.i2c_address, self.i2c_regs['PISUGAR_REG_VCELL_MSB'], 2)
-        self.voltage = ((read[0] << 8) | read[1])/1000.0
+        voltage = ((read[0] << 8) | read[1])/1000.0
+        ret = self.voltage == voltage
+        self.voltage = voltage
+        return ret
 
     def read_plugged_in(self):
         """Read if power adapter is plugged in or not"""
         read = self.bus.read_byte_data(self.i2c_address, self.i2c_regs['PISUGAR_REG_PLUGGED_IN'])
-        if ((read >> 7)&0x01) == 1:
-            self.plugged_in = True
-        else:
-            self.plugged_in = False
-    
+        plugged_in = bool((read >> 7)&0x01)
+        ret = self.plugged_in == plugged_in
+        self.plugged_in = pin_state
+        return ret
+
     def update_all(self):
-        """Read all informations"""
-        self.read_capacity()
-        self.read_voltage()
-        self.read_plugged_in()
+        """Read all informations and returns if something changed"""
+        ret = False
+        ret |= self.read_capacity()
+        ret |= self.read_voltage()
+        ret |= self.read_plugged_in()
+        return ret
 
 if __name__ == "__main__":
     try:
