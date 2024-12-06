@@ -552,7 +552,7 @@ main() {
     echo "5. epd2in7"
     
     while true; do
-        read -p "Enter your choice (1-4): " epd_choice
+        read -p "Enter your choice (1-5): " epd_choice
         case $epd_choice in
             1) EPD_VERSION="epd2in13"; break;;
             2) EPD_VERSION="epd2in13_V2"; break;;
@@ -569,15 +569,19 @@ main() {
     echo -e "\n${BLUE}Please select your UPS version:${NC}"
     echo "1. NONE"
     echo "2. ups-lite_V1.3"
-    echo "3. pisugar3"
+    echo "3. pisugar2"
+    echo "4. pisugar2_pro"
+    echo "5. pisugar3"
 
     while true; do
-        read -p "Enter your choice (1-2): " ups_choice
+        read -p "Enter your choice (1-5): " ups_choice
         case $ups_choice in
             1) UPS_VERSION="none"; break;;
             2) UPS_VERSION="ups-lite_V1.3"; read -p "For this model, don't forget to bridge the two little pads next to the gpio pins. [Ok]"; break;;
-            3) UPS_VERSION="pisugar3"; break;;
-            *) echo -e "${RED}Invalid choice. Please select 1-2.${NC}";;
+            3) UPS_VERSION="pisugar2"; break;;
+	        4) UPS_VERSION="pisugar2_pro"; break;;
+	        5) UPS_VERSION="pisugar3"; break;;
+            *) echo -e "${RED}Invalid choice. Please select 1-5.${NC}";;
         esac
     done
 
