@@ -576,7 +576,7 @@ main() {
     while true; do
         read -p "Enter your choice (1-5): " ups_choice
         case $ups_choice in
-            1) UPS_VERSION="none"; break;;
+            1) UPS_VERSION="None"; break;;
             2) UPS_VERSION="ups-lite_V1.3"; read -p "For this model, don't forget to bridge the two little pads next to the gpio pins. [Ok]"; break;;
             3) UPS_VERSION="pisugar2"; break;;
 	        4) UPS_VERSION="pisugar2_pro"; break;;

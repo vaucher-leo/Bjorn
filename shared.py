@@ -144,6 +144,7 @@ class SharedData:
             "ref_width" :122 ,
             "ref_height" : 250,
             "epd_type": "epd2in13_V4",
+            "ups_type": "None",
 
 
             "__title_lists__": "List Settings",
@@ -281,9 +282,8 @@ class SharedData:
         self.ups_status_changed = False
         try:
             logger.info("Initializing UPS...")
-            if self.config["ups_type"] == "none":
+            if self.config["ups_type"] == "None":
                 logger.info("UPS type: no UPS")
-                self.ups = None
             else:
                 logger.info(f"UPS type: {self.config['ups_type']}")
                 self.ups = CreateUPS(self.config["ups_type"])
