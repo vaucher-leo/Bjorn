@@ -12,13 +12,16 @@
 # - PiSugar3
 #
 
-import struct
-import smbus
-import sys
-import time
 import logging
+import struct
+import sys
+from abc import ABC, abstractmethod
+
 import gpiozero
+import smbus
+
 from logger import Logger
+
 
 def CreateUPS(ups_model):
     """This function is used to create the ups device based on model name"""
@@ -33,10 +36,10 @@ def CreateUPS(ups_model):
         case "pisugar2_pro":
             return PiSugar2Pro()
         case _:
-            return UPS()
+            return None
 
 
-class UPS:
+class UPS(ABC):
     """Base class for UPS devices"""
     def __init__(self) -> None:
         """Initialize the ups connection and get first data"""
@@ -46,27 +49,41 @@ class UPS:
         self.voltage = 0.0
         self.plugged_in = False
 
-    def read_capacity(self) -> None:
-        """Read battery capacity"""
-        self.battery_capacity = None
-        return False
+    @abstractmethod
+    def read_capacity(self) -> bool:
+        """Read battery capacity
 
-    def read_voltage(self) -> None:
-        """Read battery voltage"""
-        self.voltage = None
-        return False
+        Returns:
+            bool: True if the value changed
+        """
+        pass
 
-    def read_plugged_in(self) -> None:
-        """Read if power adapter is plugged in or not"""
-        self.plugged_in = False
-        return False
+    @abstractmethod
+    def read_voltage(self) -> bool:
+        """Read battery voltage
 
-    def update_all(self) -> None:
-        """Read all informations and returns if something changed"""
-        self.read_capacity()
-        self.read_voltage()
-        self.read_plugged_in()
-        return False
+        Returns:
+            bool: True if the value changed
+        """
+        pass
+
+    @abstractmethod
+    def read_plugged_in(self) -> bool:
+        """Read if power adapter is plugged in or not
+
+        Returns:
+            bool: True if the value changed
+        """
+        pass
+
+    @abstractmethod
+    def update_all(self) -> bool:
+        """Read all informations and returns if something changed
+
+        Returns:
+            bool: True if any value changed
+        """
+        pass
 
 class UPS_Lite(UPS):
     """Class for UPS model: UPS-Lite_V1.3"""
@@ -94,7 +111,7 @@ class UPS_Lite(UPS):
             self.logger.error(f"Error during ups_lite initialization: {e}")
             raise
 
-    def read_capacity(self):
+    def read_capacity(self) -> bool:
         """Read battery capacity"""
         read = self.bus.read_word_data(self.i2c_address, self.i2c_regs['CW2015_REG_SOC'])
         swapped = struct.unpack("<H", struct.pack(">H", read))[0]
@@ -103,7 +120,7 @@ class UPS_Lite(UPS):
         self.battery_capacity = capacity
         return ret
 
-    def read_voltage(self):
+    def read_voltage(self) -> bool:
         """Read battery voltage"""
         read = self.bus.read_word_data(self.i2c_address, self.i2c_regs['CW2015_REG_VCELL'])
         swapped = struct.unpack("<H", struct.pack(">H", read))[0]
@@ -112,14 +129,14 @@ class UPS_Lite(UPS):
         self.voltage = voltage
         return ret
 
-    def read_plugged_in(self):
+    def read_plugged_in(self) -> bool:
         """Read if power adapter is plugged in or not"""
         pin_state = bool(self.gpio_plugged_in.value)
         ret = self.plugged_in == pin_state
         self.plugged_in = pin_state
         return ret
 
-    def update_all(self):
+    def update_all(self) -> bool:
         """Read all informations and returns if something changed"""
         ret = False
         ret |= self.read_capacity()
@@ -151,7 +168,7 @@ class PiSugar2(UPS):
             reg = self.bus.read_byte_data(self.i2c_address, 0x52)
             self.bus.write_byte_data(self.i2c_address, 0x52, reg | 0x10) # Set function of GPIO4
             reg = self.bus.read_byte_data(self.i2c_address, 0x53)
-            self.bus.write_byte_data(self.i2_address, 0x53, reg | 0x10) # Enable charging on GPIO4
+            self.bus.write_byte_data(self.i2c_address, 0x53, reg | 0x10) # Enable charging on GPIO4
 
             # Run first measurement
             self.update_all()
@@ -160,7 +177,7 @@ class PiSugar2(UPS):
             self.logger.error(f"Error during PiSugar3 initialization: {e}")
             raise
 
-    def read_capacity(self):
+    def read_capacity(self) -> bool:
         """Read battery capacity"""
         # Thanx to this repo:
         # https://github.com/kellertk/pwnagotchi-plugin-pisugar2/blob/main/pisugar2.py
@@ -188,7 +205,7 @@ class PiSugar2(UPS):
         self.battery_capacity = capacity
         return ret
 
-    def read_voltage(self):
+    def read_voltage(self) -> bool:
         """Read battery voltage"""
         read = self.bus.read_i2c_block_data(self.i2c_address, self.i2c_regs['PISUGAR_REG_VCELL_MSB'], 2)
         voltage_raw = (((read[1]&0x3F) << 8) | read[0])
@@ -197,7 +214,7 @@ class PiSugar2(UPS):
         self.voltage = voltage
         return ret
 
-    def read_plugged_in(self):
+    def read_plugged_in(self) -> bool:
         """Read if power adapter is plugged in or not"""
         read = self.bus.read_byte_data(self.i2c_address, self.i2c_regs['PISUGAR_REG_PLUGGED_IN'])
         plugged_in = bool((read >> 4)&0x01)
@@ -205,7 +222,7 @@ class PiSugar2(UPS):
         self.plugged_in = plugged_in
         return ret
 
-    def update_all(self):
+    def update_all(self) -> bool:
         """Read all informations and returns if something changed"""
         ret = False
         ret |= self.read_capacity()
@@ -237,7 +254,7 @@ class PiSugar2Pro(UPS):
             self.bus.write_byte_data(self.i2c_address, 0x51, ret | 0x40) # Set Vset to internal register
             reg = self.bus.read_byte_data(self.i2c_address, 0x52)
             self.bus.write_byte_data(self.i2c_address, 0x52, (reg | 0x40) & ~0x20) # Set function of GPIO4
-            self.bus.write_byte_data(self.i2_address, 0xC2, 0x00) # Enable charging
+            self.bus.write_byte_data(self.i2c_address, 0xC2, 0x00) # Enable charging
 
             # Run first measurement
             self.update_all()
@@ -246,7 +263,7 @@ class PiSugar2Pro(UPS):
             self.logger.error(f"Error during PiSugar3 initialization: {e}")
             raise
 
-    def read_capacity(self):
+    def read_capacity(self) -> bool:
         """Read battery capacity"""
         # Thanx to this repo:
         # https://github.com/kellertk/pwnagotchi-plugin-pisugar2/blob/main/pisugar2.py
@@ -274,7 +291,7 @@ class PiSugar2Pro(UPS):
         self.battery_capacity = capacity
         return ret
 
-    def read_voltage(self):
+    def read_voltage(self) -> bool:
         """Read battery voltage"""
         read = self.bus.read_i2c_block_data(self.i2c_address, self.i2c_regs['PISUGAR_REG_VCELL_MSB'], 2)
         voltage_raw = (((read[1]&0x3F) << 8) | read[0])
@@ -283,7 +300,7 @@ class PiSugar2Pro(UPS):
         self.voltage = voltage
         return ret
 
-    def read_plugged_in(self):
+    def read_plugged_in(self) -> bool:
         """Read if power adapter is plugged in or not"""
         read = self.bus.read_i2c_block_data(self.i2c_address, self.i2c_regs['PISUGAR_REG_PLUGGED_IN'], 2)
         if (read[0] == 0xFF) and ((read[1]&0x1F) == 0x1F):
@@ -294,7 +311,7 @@ class PiSugar2Pro(UPS):
         self.plugged_in = plugged_in
         return ret
 
-    def update_all(self):
+    def update_all(self) -> bool:
         """Read all informations and returns if something changed"""
         ret = False
         ret |= self.read_capacity()
@@ -324,14 +341,14 @@ class PiSugar3(UPS):
             self.logger.error(f"Error during PiSugar3 initialization: {e}")
             raise
 
-    def read_capacity(self):
+    def read_capacity(self) -> bool:
         """Read battery capacity"""
         capacity = self.bus.read_byte_data(self.i2c_address, self.i2c_regs['PISUGAR_REG_BATT_CAPACITY'])
         ret = self.battery_capacity == capacity
         self.battery_capacity = capacity
         return ret
 
-    def read_voltage(self):
+    def read_voltage(self) -> bool:
         """Read battery voltage"""
         read = self.bus.read_i2c_block_data(self.i2c_address, self.i2c_regs['PISUGAR_REG_VCELL_MSB'], 2)
         voltage = ((read[0] << 8) | read[1])/1000.0
@@ -339,7 +356,7 @@ class PiSugar3(UPS):
         self.voltage = voltage
         return ret
 
-    def read_plugged_in(self):
+    def read_plugged_in(self) -> bool:
         """Read if power adapter is plugged in or not"""
         read = self.bus.read_byte_data(self.i2c_address, self.i2c_regs['PISUGAR_REG_PLUGGED_IN'])
         plugged_in = bool((read >> 7)&0x01)
@@ -347,15 +364,17 @@ class PiSugar3(UPS):
         self.plugged_in = plugged_in
         return ret
 
-    def update_all(self):
+    def update_all(self) -> bool:
         """Read all informations and returns if something changed"""
         ret = False
         ret |= self.read_capacity()
         ret |= self.read_voltage()
         ret |= self.read_plugged_in()
         return ret
+
 if __name__ == "__main__":
     try:
          ups = UPS_Lite()
     except Exception as e:
+        print(f"Exception error: {e}")
         sys.exit(1)
